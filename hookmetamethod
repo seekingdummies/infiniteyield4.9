@@ -1,0 +1,26 @@
+      getgenv().hookmetamethod = function(Obj, Name, Func)
+    local mt = getrawmetatable(Obj)
+    assert(mt, "Object has no metatable")
+    assert(type(Name) == "string", "Name must be a string")
+    assert(type(Func) == "function", "Func must be a function")
+
+    local OldMethod = rawget(mt, Name)
+
+    setreadonly(mt, false)
+    local ok, err = pcall(function()
+        rawset(mt, Name, Func)
+    end)
+    setreadonly(mt, true) -- always restore, success or failure
+
+    if not ok then
+        -- attempt to restore original method on failure
+        pcall(function()
+            setreadonly(mt, false)
+            rawset(mt, Name, OldMethod)
+            setreadonly(mt, true)
+        end)
+        error("hookmetamethod: failed to hook " .. Name .. ": " .. tostring(err), 2)
+    end
+
+    return OldMethod
+end
